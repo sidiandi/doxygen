@@ -52,6 +52,8 @@ static QCString g_footer;
 static QCString g_mathjax_code;
 
 
+// note: this is only active if DISABLE_INDEX=YES, if DISABLE_INDEX is disabled, this
+// part will be rendered inside menu.js
 static void writeClientSearchBox(FTextStream &t,const char *relPath)
 {
   t << "        <div id=\"MSearchBox\" class=\"MSearchBoxInactive\">\n";
@@ -72,6 +74,8 @@ static void writeClientSearchBox(FTextStream &t,const char *relPath)
   t << "        </div>\n";
 }
 
+// note: this is only active if DISABLE_INDEX=YES. if DISABLE_INDEX is disabled, this
+// part will be rendered inside menu.js
 static void writeServerSearchBox(FTextStream &t,const char *relPath,bool highlightSearch)
 {
   static bool externalSearch = Config_getBool(EXTERNAL_SEARCH);
@@ -292,7 +296,6 @@ static QCString substituteHtmlKeywords(const QCString &s,
                     "<script type=\"text/javascript\" src=\"$relpath^navtree.js\"></script>\n"
                     "<script type=\"text/javascript\">\n"
                     "  $(document).ready(initResizable);\n"
-                    "  $(window).load(resizeHeight);\n"
                     "</script>";
   }
 
@@ -305,19 +308,25 @@ static QCString substituteHtmlKeywords(const QCString &s,
     }
     searchCssJs += "<script type=\"text/javascript\" src=\"$relpath^search/search.js\"></script>\n";
 
-    if (!serverBasedSearch) 
+    if (!serverBasedSearch)
     {
-      searchCssJs += "<script type=\"text/javascript\">\n"
-                     "  $(document).ready(function() { init_search(); });\n"
-                     "</script>";
+      if (disableIndex)
+      {
+        searchCssJs += "<script type=\"text/javascript\">\n"
+                       "  $(document).ready(function() { init_search(); });\n"
+                       "</script>";
+      }
     }
-    else 
+    else
     {
-      searchCssJs += "<script type=\"text/javascript\">\n"
-                     "  $(document).ready(function() {\n"
-                     "    if ($('.searchresults').length > 0) { searchBox.DOMSearchField().focus(); }\n"
-                     "  });\n"
-                     "</script>\n";
+      if (disableIndex)
+      {
+        searchCssJs += "<script type=\"text/javascript\">\n"
+                       "  $(document).ready(function() {\n"
+                       "    if ($('.searchresults').length > 0) { searchBox.DOMSearchField().focus(); }\n"
+                       "  });\n"
+                       "</script>\n";
+      }
 
       // OPENSEARCH_PROVIDER {
       searchCssJs += "<link rel=\"search\" href=\"" + relPath +
@@ -727,6 +736,10 @@ void HtmlGenerator::init()
   {
     mgr.copyResource("svgpan.js",dname);
   }
+  if (!Config_getBool(DISABLE_INDEX))
+  {
+    mgr.copyResource("menu.js",dname);
+  }
 
   {
     QFile f(dname+"/dynsections.js");
@@ -808,13 +821,16 @@ void HtmlGenerator::writeSearchData(const char *dir)
   if (f.open(IO_WriteOnly))
   {
     FTextStream t(&f);
-    QCString searchCss = replaceColorMarkers(mgr.getAsString("search.css"));
-    searchCss = substitute(searchCss,"$doxygenversion",versionString);
+    QCString searchCss;
     if (Config_getBool(DISABLE_INDEX))
     {
-      // move up the search box if there are no tabs
-      searchCss = substitute(searchCss,"margin-top: 8px;","margin-top: 0px;");
+      searchCss = mgr.getAsString("search_nomenu.css");
     }
+    else
+    {
+      searchCss = mgr.getAsString("search.css");
+    }
+    searchCss = substitute(replaceColorMarkers(searchCss),"$doxygenversion",versionString);
     t << searchCss;
     Doxygen::indexList->addStyleSheetFile("search/search.css");
   }
@@ -1017,7 +1033,7 @@ void HtmlGenerator::startDoxyAnchor(const char *,const char *,
                                     const char *anchor, const char *,
                                     const char *)
 {
-  t << "<a class=\"anchor\" id=\"" << anchor << "\"></a>";
+  t << "<a id=\"" << anchor << "\"></a>";
 }
 
 void HtmlGenerator::endDoxyAnchor(const char *,const char *)
@@ -1193,7 +1209,7 @@ void HtmlGenerator::startSection(const char *lab,const char *,SectionInfo::Secti
     case SectionInfo::Paragraph:     t << "\n\n<h5>"; break;
     default: ASSERT(0); break;
   }
-  t << "<a class=\"anchor\" id=\"" << lab << "\"></a>";
+  t << "<a id=\"" << lab << "\"></a>";
 }
 
 void HtmlGenerator::endSection(const char *,SectionInfo::SectionType type)
@@ -1539,10 +1555,20 @@ void HtmlGenerator::endMemberDocList()
   DBG_HTML(t << "<!-- endMemberDocList -->" << endl;)
 }
 
-void HtmlGenerator::startMemberDoc(const char *,const char *,const char *,const char *,bool) 
-{ 
+void HtmlGenerator::startMemberDoc( const char *clName, const char *memName,
+                                    const char *anchor, const char *title, 
+                                    int memCount, int memTotal, bool showInline)
+{
   DBG_HTML(t << "<!-- startMemberDoc -->" << endl;)
- 
+  t << "\n<h2 class=\"memtitle\">"
+    << "<span class=\"permalink\"><a href=\"#" << anchor << "\">&sect;&nbsp;</a></span>"
+    << title;
+  if (memTotal>1)
+  {
+    t << " <span class=\"overload\">[" << memCount << "/" << memTotal <<"]</span>";
+  }
+  t << "</h2>"
+    << endl;
   t << "\n<div class=\"memitem\">" << endl;
   t << "<div class=\"memproto\">" << endl;
 }
@@ -1837,6 +1863,46 @@ void HtmlGenerator::writeNonBreakableSpace(int n)
   }
 }
 
+void HtmlGenerator::startDescTable(const char *title)
+{
+  t << "<table class=\"fieldtable\">" << endl
+    << "<tr><th colspan=\"2\">" << title << "</th></tr>";
+}
+void HtmlGenerator::endDescTable()
+{
+  t << "</table>" << endl;
+}
+
+void HtmlGenerator::startDescTableRow()
+{
+  t << "<tr>";
+}
+
+void HtmlGenerator::endDescTableRow()
+{
+  t << "</tr>" << endl;
+}
+
+void HtmlGenerator::startDescTableTitle()
+{
+  t << "<td class=\"fieldname\">";
+}
+
+void HtmlGenerator::endDescTableTitle()
+{
+  t << "&#160;</td>";
+}
+
+void HtmlGenerator::startDescTableData()
+{
+  t << "<td class=\"fielddoc\">";
+}
+
+void HtmlGenerator::endDescTableData()
+{
+  t << "</td>";
+}
+
 void HtmlGenerator::startSimpleSect(SectionTypes,
                                 const char *filename,const char *anchor,
                                 const char *title)
@@ -2070,59 +2136,47 @@ static void writeDefaultQuickLinks(FTextStream &t,bool compact,
                                    const char *file,
                                    const QCString &relPath)
 {
+  static bool serverBasedSearch = Config_getBool(SERVER_BASED_SEARCH);
+  static bool searchEngine = Config_getBool(SEARCHENGINE);
+  static bool externalSearch = Config_getBool(EXTERNAL_SEARCH);
   LayoutNavEntry *root = LayoutDocManager::instance().rootNavEntry();
-  LayoutNavEntry::Kind kind = (LayoutNavEntry::Kind)-1;
-  LayoutNavEntry::Kind altKind = (LayoutNavEntry::Kind)-1; // fall back for the old layout file
-  bool highlightParent=FALSE;
-  switch (hli) // map HLI enums to LayoutNavEntry::Kind enums
-  {
-    case HLI_Main:             kind = LayoutNavEntry::MainPage;         break;
-    case HLI_Modules:          kind = LayoutNavEntry::Modules;          break;
-    //case HLI_Directories:      kind = LayoutNavEntry::Dirs;             break;
-    case HLI_Namespaces:       kind = LayoutNavEntry::NamespaceList;    altKind = LayoutNavEntry::Namespaces;  break;
-    case HLI_Hierarchy:        kind = LayoutNavEntry::ClassHierarchy;   break;
-    case HLI_Classes:          kind = LayoutNavEntry::ClassIndex;       altKind = LayoutNavEntry::Classes;     break;
-    case HLI_Annotated:        kind = LayoutNavEntry::ClassList;        altKind = LayoutNavEntry::Classes;     break;
-    case HLI_Files:            kind = LayoutNavEntry::FileList;         altKind = LayoutNavEntry::Files;       break;
-    case HLI_NamespaceMembers: kind = LayoutNavEntry::NamespaceMembers; break;
-    case HLI_Functions:        kind = LayoutNavEntry::ClassMembers;     break;
-    case HLI_Globals:          kind = LayoutNavEntry::FileGlobals;      break;
-    case HLI_Pages:            kind = LayoutNavEntry::Pages;            break;
-    case HLI_Examples:         kind = LayoutNavEntry::Examples;         break;
-    case HLI_UserGroup:        kind = LayoutNavEntry::UserGroup;        break;
-    case HLI_ClassVisible:     kind = LayoutNavEntry::ClassList;        altKind = LayoutNavEntry::Classes;          
-                               highlightParent = TRUE; break;
-    case HLI_NamespaceVisible: kind = LayoutNavEntry::NamespaceList;    altKind = LayoutNavEntry::Namespaces;       
-                               highlightParent = TRUE; break;
-    case HLI_FileVisible:      kind = LayoutNavEntry::FileList;         altKind = LayoutNavEntry::Files;            
-                               highlightParent = TRUE; break;
-    case HLI_None:   break;
-    case HLI_Search: break;
-  }
-  
+
   if (compact)
   {
-    // find highlighted index item
-    LayoutNavEntry *hlEntry = root->find(kind,kind==LayoutNavEntry::UserGroup ? file : 0);
-    if (!hlEntry && altKind!=(LayoutNavEntry::Kind)-1) { hlEntry=root->find(altKind); kind=altKind; }
-    if (!hlEntry) // highlighted item not found in the index! -> just show the level 1 index...
+    QCString searchPage;
+    if (externalSearch)
     {
-      highlightParent=TRUE;
-      hlEntry = root->children().getFirst();
-      if (hlEntry==0) 
+      searchPage = "search" + Doxygen::htmlFileExtension;
+    }
+    else
+    {
+      searchPage = "search.php";
+    }
+    t << "<script type=\"text/javascript\" src=\"" << relPath << "menudata.js\"></script>" << endl;
+    t << "<script type=\"text/javascript\" src=\"" << relPath << "menu.js\"></script>" << endl;
+    t << "<script type=\"text/javascript\">" << endl;
+    t << "$(function() {" << endl;
+    t << "  initMenu('" << relPath << "',"
+      << (searchEngine?"true":"false") << ","
+      << (serverBasedSearch?"true":"false") << ",'"
+      << searchPage << "','"
+      << theTranslator->trSearch() << "');" << endl;
+    if (Config_getBool(SEARCHENGINE))
+    {
+      if (!serverBasedSearch)
       {
-        return; // argl, empty index!
+        t << "  $(document).ready(function() { init_search(); });\n";
+      }
+      else
+      {
+        t << "  $(document).ready(function() {\n"
+          << "    if ($('.searchresults').length > 0) { searchBox.DOMSearchField().focus(); }\n"
+          << "  });\n";
       }
     }
-    if (kind==LayoutNavEntry::UserGroup)
-    {
-      LayoutNavEntry *e = hlEntry->children().getFirst();
-      if (e)
-      {
-        hlEntry = e; 
-      }
-    }
-    renderQuickLinksAsTabs(t,relPath,hlEntry,kind,highlightParent,hli==HLI_Search);
+    t << "});" << endl;
+    t << "</script>" << endl;
+    t << "<div id=\"main-nav\"></div>" << endl;
   }
   else
   {
@@ -2258,9 +2312,7 @@ void HtmlGenerator::writeSearchPage()
     // Write empty navigation path, to make footer connect properly
     if (generateTreeView)
     {
-      t << "</div><!-- doc-contents -->\n";
-      //t << "<div id=\"nav-path\" class=\"navpath\">\n";
-      //t << "  <ul>\n";
+      t << "</div><!-- doc-content -->\n";
     }
 
     writePageFooter(t,"Search","","");
@@ -2281,6 +2333,7 @@ void HtmlGenerator::writeSearchPage()
 void HtmlGenerator::writeExternalSearchPage()
 {
   static bool generateTreeView = Config_getBool(GENERATE_TREEVIEW);
+  static bool disableIndex = Config_getBool(DISABLE_INDEX);
   QCString fileName = Config_getString(HTML_OUTPUT)+"/search"+Doxygen::htmlFileExtension;
   QFile f(fileName);
   if (f.open(IO_WriteOnly))
@@ -2323,10 +2376,11 @@ void HtmlGenerator::writeExternalSearchPage()
 
     if (generateTreeView)
     {
-      t << "</div><!-- doc-contents -->" << endl;
+      t << "</div><!-- doc-content -->" << endl;
     }
 
     writePageFooter(t,"Search","","");
+
   }
   QCString scriptName = Config_getString(HTML_OUTPUT)+"/search/search.js";
   QFile sf(scriptName);
@@ -2474,14 +2528,16 @@ void HtmlGenerator::endInlineHeader()
   t << "</h3></td></tr>" << endl;
 }
 
-void HtmlGenerator::startMemberDocSimple()
+void HtmlGenerator::startMemberDocSimple(bool isEnum)
 {
   DBG_HTML(t << "<!-- startMemberDocSimple -->" << endl;)
   t << "<table class=\"fieldtable\">" << endl;
-  t << "<tr><th colspan=\"3\">" << theTranslator->trCompoundMembers() << "</th></tr>" << endl;
+  t << "<tr><th colspan=\"" << (isEnum?"2":"3") << "\">";
+  t << (isEnum? theTranslator->trEnumerationValues() :
+       theTranslator->trCompoundMembers()) << "</th></tr>" << endl;
 }
 
-void HtmlGenerator::endMemberDocSimple()
+void HtmlGenerator::endMemberDocSimple(bool)
 {
   DBG_HTML(t << "<!-- endMemberDocSimple -->" << endl;)
   t << "</table>" << endl;

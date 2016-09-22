@@ -2077,11 +2077,9 @@ void MemberDef::_writeCallGraph(OutputList &ol)
     {
       msg("Generating call graph for function %s\n",qPrint(qualifiedName()));
       ol.disable(OutputGenerator::Man);
-      ol.startParagraph();
       ol.startCallGraph();
       ol.parseText(theTranslator->trCallGraph());
       ol.endCallGraph(callGraph);
-      ol.endParagraph();
       ol.enableAll();
     }
   }
@@ -2102,11 +2100,9 @@ void MemberDef::_writeCallerGraph(OutputList &ol)
     {
       msg("Generating caller graph for function %s\n",qPrint(qualifiedName()));
       ol.disable(OutputGenerator::Man);
-      ol.startParagraph();
       ol.startCallGraph();
       ol.parseText(theTranslator->trCallerGraph());
       ol.endCallGraph(callerGraph);
-      ol.endParagraph();
       ol.enableAll();
     }
   }
@@ -2346,6 +2342,7 @@ void MemberDef::_writeEnumValues(OutputList &ol,Definition *container,
             ol.startDescTable(theTranslator->trEnumerationValues());
           }
 
+          ol.startDescTableRow();
           ol.addIndexItem(fmd->name(),ciname);
           ol.addIndexItem(ciname,fmd->name());
 
@@ -2395,6 +2392,7 @@ void MemberDef::_writeEnumValues(OutputList &ol,Definition *container,
                 fmd,fmd->documentation()+"\n",TRUE,FALSE);
           }
           ol.endDescTableData();
+          ol.endDescTableRow();
         }
       }
     }
@@ -2532,7 +2530,9 @@ void MemberDef::_writeGroupInclude(OutputList &ol,bool inGroup)
 /*! Writes the "detailed documentation" section of this member to
  *  all active output formats.
  */
-void MemberDef::writeDocumentation(MemberList *ml,OutputList &ol,
+void MemberDef::writeDocumentation(MemberList *ml,
+                                   int memCount,int memTotal,
+                                   OutputList &ol,
                                    const char *scName,
                                    Definition *container,
                                    bool inGroup,
@@ -2548,8 +2548,8 @@ void MemberDef::writeDocumentation(MemberList *ml,OutputList &ol,
   //printf("MemberDef::writeDocumentation(): name=`%s' hasDocs=`%d' containerType=%d inGroup=%d sectionLinkable=%d\n",
   //    name().data(),hasDocs,container->definitionType(),inGroup,isDetailedSectionLinkable());
 
-  if ( !hasDocs ) return;
-  if (isEnumValue() && !showEnumValues) return;
+  //if ( !hasDocs ) return;
+  //if (isEnumValue() && !showEnumValues) return;
 
   SrcLangExt lang = getLanguage();
   //printf("member=%s lang=%d\n",name().data(),lang);
@@ -2612,7 +2612,7 @@ void MemberDef::writeDocumentation(MemberList *ml,OutputList &ol,
   }
   else if (isFunction())
   {
-    title+=argsString();
+    title += "()";
   }
   int i=0,l;
   static QRegExp r("@[0-9]+");
@@ -2628,7 +2628,7 @@ void MemberDef::writeDocumentation(MemberList *ml,OutputList &ol,
   if ((isVariable() || isTypedef()) && (i=r.match(ldef,0,&l))!=-1)
   {
     // find enum type and insert it in the definition
-    QListIterator<MemberDef> vmli(*ml);
+    MemberListIterator vmli(*ml);
     MemberDef *vmd;
     bool found=FALSE;
     for ( ; (vmd=vmli.current()) && !found ; ++vmli)
@@ -2636,7 +2636,7 @@ void MemberDef::writeDocumentation(MemberList *ml,OutputList &ol,
       if (vmd->isEnumerate() && ldef.mid(i,l)==vmd->name())
       {
         ol.startDoxyAnchor(cfname,cname,memAnchor,doxyName,doxyArgs);
-        ol.startMemberDoc(ciname,name(),memAnchor,name(),showInline);
+        ol.startMemberDoc(ciname,name(),memAnchor,name(),memCount,memTotal,showInline);
         linkifyText(TextGeneratorOLImpl(ol),scopedContainer,getBodyDef(),this,ldef.left(i));
         vmd->writeEnumDeclaration(ol,getClassDef(),getNamespaceDef(),getFileDef(),getGroupDef());
         linkifyText(TextGeneratorOLImpl(ol),scopedContainer,getBodyDef(),this,ldef.right(ldef.length()-i-l));
@@ -2648,7 +2648,7 @@ void MemberDef::writeDocumentation(MemberList *ml,OutputList &ol,
     {
       //printf("Anonymous compound `%s'\n",cname.data());
       ol.startDoxyAnchor(cfname,cname,memAnchor,doxyName,doxyArgs);
-      ol.startMemberDoc(ciname,name(),memAnchor,name(),showInline);
+      ol.startMemberDoc(ciname,name(),memAnchor,name(),memCount,memTotal,showInline);
       // search for the last anonymous compound name in the definition
       int si=ldef.find(' '),pi,ei=i+l;
       if (si==-1) si=0;
@@ -2670,7 +2670,7 @@ void MemberDef::writeDocumentation(MemberList *ml,OutputList &ol,
   else // not an enum value or anonymous compound
   {
     ol.startDoxyAnchor(cfname,cname,memAnchor,doxyName,doxyArgs);
-    ol.startMemberDoc(ciname,name(),memAnchor,title,showInline);
+    ol.startMemberDoc(ciname,name(),memAnchor,title,memCount,memTotal,showInline);
 
     ClassDef *cd=getClassDef();
     NamespaceDef *nd=getNamespaceDef();
@@ -3120,43 +3120,47 @@ void MemberDef::writeMemberDocSimple(OutputList &ol, Definition *container)
   ClassDef *cd = m_impl->accessorClass;
   //printf("===> %s::anonymous: %s\n",name().data(),cd?cd->name().data():"<none>");
 
-  ol.startInlineMemberType();
-  ol.startDoxyAnchor(cfname,cname,memAnchor,doxyName,doxyArgs);
-
-  QCString ts = fieldType();
-
-  if (cd) // cd points to an anonymous struct pointed to by this member
-          // so we add a link to it from the type column.
+  if (container && container->definitionType()==Definition::TypeClass &&
+      !((ClassDef*)container)->isJavaEnum())
   {
-    int i=0;
-    const char *prefixes[] = { "struct ","union ","class ", 0 };
-    const char **p = prefixes;
-    while (*p)
+    ol.startInlineMemberType();
+    ol.startDoxyAnchor(cfname,cname,memAnchor,doxyName,doxyArgs);
+
+    QCString ts = fieldType();
+
+    if (cd) // cd points to an anonymous struct pointed to by this member
+      // so we add a link to it from the type column.
     {
-      int l=qstrlen(*p);
-      if (ts.left(l)==*p)
+      int i=0;
+      const char *prefixes[] = { "struct ","union ","class ", 0 };
+      const char **p = prefixes;
+      while (*p)
       {
-        ol.writeString(*p);
-        i=l;
+        int l=qstrlen(*p);
+        if (ts.left(l)==*p)
+        {
+          ol.writeString(*p);
+          i=l;
+        }
+        p++;
       }
-      p++;
+      ol.writeObjectLink(cd->getReference(),
+          cd->getOutputFileBase(),
+          cd->anchor(),ts.mid(i));
     }
-    ol.writeObjectLink(cd->getReference(),
-                       cd->getOutputFileBase(),
-                       cd->anchor(),ts.mid(i));
+    else // use standard auto linking
+    {
+      linkifyText(TextGeneratorOLImpl(ol), // out
+          scope,                   // scope
+          getBodyDef(),            // fileScope
+          this,                    // self
+          ts,                      // text
+          TRUE                     // autoBreak
+          );
+    }
+    ol.endDoxyAnchor(cfname,memAnchor);
+    ol.endInlineMemberType();
   }
-  else // use standard auto linking
-  {
-    linkifyText(TextGeneratorOLImpl(ol), // out
-                scope,                   // scope
-                getBodyDef(),            // fileScope
-                this,                    // self
-                ts,                      // text
-                TRUE                     // autoBreak
-               );
-  }
-  ol.endDoxyAnchor(cfname,memAnchor);
-  ol.endInlineMemberType();
 
   ol.startInlineMemberName();
   ol.docify(doxyName);

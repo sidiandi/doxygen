@@ -1977,6 +1977,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 					    current->section=Entry::USINGDECL_SEC;
 					  }
 					  current_root->addSubEntry(current);
+                                          previous = current;
 					  current = new Entry ;
 					  initEntry();
 					  BEGIN(Using);
@@ -5770,7 +5771,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 <BasesProt>"virtual"{BN}+               { lineCount(); baseVirt = Virtual; }
 <BasesProt>"public"{BN}+                { lineCount(); baseProt = Public; }
 <BasesProt>"protected"{BN}+             { lineCount(); baseProt = Protected; }
-<BasesProt>"internal"{BN}+              { lineCount(); baseProt = Package; }
+<BasesProt>"internal"{BN}+              { if (!insideCli) REJECT ; lineCount(); baseProt = Package; }
 <BasesProt>"private"{BN}+               { lineCount(); baseProt = Private; }
 <BasesProt>{BN}				{ lineCount(); }
 <BasesProt>.				{ unput(*yytext); BEGIN(Bases); }

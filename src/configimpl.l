@@ -1155,24 +1155,27 @@ static void cleanUpPaths(QStrList &str)
       char c;
       while ((c=*p))
       {
-	if (c=='\\') *p='/';
-	p++;
+        if (c=='\\') *p='/';
+        p++;
       }
     }
     QCString path = sfp;
     if ((path.at(0)!='/' && (path.length()<=2 || path.at(1)!=':')) ||
-	path.at(path.length()-1)!='/'
+         path.at(path.length()-1)!='/'
        )
     {
       QFileInfo fi(path);
       if (fi.exists() && fi.isDir())
       {
-	int i = str.at();
-	str.remove();
-	if (str.at()==i) // did not remove last item
-	  str.insert(i,fi.absFilePath().utf8()+"/");
-	else
-	  str.append(fi.absFilePath().utf8()+"/");
+        int i = str.at();
+        QString p = fi.absFilePath();
+        if (p.at(p.length()-1)!='/')
+          p.append('/');
+        str.remove();
+        if (str.at()==i) // did not remove last item
+          str.insert(i,p.utf8());
+        else
+          str.append(p.utf8());
       }
     }
     sfp = str.next();
@@ -1189,26 +1192,6 @@ static void checkFileName(QCString &s,const char *optionName)
     s=""; // note the use of &s above: this will change the option value!
   }
 }
-
-static void initFilePattern(void)
-{
-  // add default pattern if needed
-  QStrList &filePatternList = ConfigImpl_getList("FILE_PATTERNS");
-  if (filePatternList.isEmpty())
-  {
-    QDictIterator<int> it( getExtensionLookup() );
-    QCString pattern;
-    bool caseSens =  portable_fileSystemIsCaseSensitive();
-    for (;it.current();++it)
-    {
-      pattern = "*";
-      pattern += it.currentKey();
-      filePatternList.append(pattern.data());
-      if (caseSens) filePatternList.append(pattern.upper().data());
-    }
-  }
-}
-
 
 #include "config.h"
 
@@ -1281,7 +1264,10 @@ void Config::checkAndCorrect()
   char *sfp = stripFromPath.first();
   if (sfp==0) // by default use the current path
   {
-    stripFromPath.append(QDir::currentDirPath().utf8()+"/");
+    QString p = QDir::currentDirPath();
+    if (p.at(p.length()-1)!='/')
+        p.append('/');
+    stripFromPath.append(p.utf8());
   }
   else
   {
@@ -1565,7 +1551,16 @@ void Config::checkAndCorrect()
     }
   }
 
-  initFilePattern();
+  // add default file patterns if needed
+  QStrList &filePatternList = ConfigImpl_getList("FILE_PATTERNS");
+  if (filePatternList.isEmpty())
+  {
+      ConfigOption * opt = ConfigImpl::instance()->get("FILE_PATTERNS");
+      if (opt->kind()==ConfigOption::O_List)
+      {
+        ((ConfigList*)opt)->init();
+      }
+  }
 
   // add default pattern if needed
   QStrList &examplePatternList = ConfigImpl_getList("EXAMPLE_PATTERNS");

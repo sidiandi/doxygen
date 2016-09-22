@@ -109,6 +109,7 @@ static int	     g_lastSpecialCContext;
 static int           g_lastStringContext;
 static int           g_lastSkipCppContext;
 static int           g_lastVerbStringContext;
+static int           g_lastObjCCallContext;
 static int           g_memCallContext;
 static int	     g_lastCContext;
 static int           g_skipInlineInitContext;
@@ -132,6 +133,7 @@ struct ObjCCallCtx
   int id;
   QCString methodName;
   QCString objectTypeOrName;
+  QGString comment;
   ClassDef *objectType;
   MemberDef *objectVar;
   MemberDef *method;
@@ -146,11 +148,13 @@ static int g_currentCtxId=0;
 static int g_currentNameId=0;
 static int g_currentObjId=0;
 static int g_currentWordId=0;
+static int g_currentCommentId=0;
 static QStack<ObjCCallCtx> g_contextStack;
 static QIntDict<ObjCCallCtx> g_contextDict;
 static QIntDict<QCString> g_nameDict;
 static QIntDict<QCString> g_objectDict;
 static QIntDict<QCString> g_wordDict;
+static QIntDict<QCString> g_commentDict;
 static int g_braceCount=0;
   
 static void saveObjCContext();
@@ -858,42 +862,51 @@ static bool getLinkInScope(const QCString &c,  // scope
   GroupDef     *gd;
   DBG_CTX((stderr,"getLinkInScope: trying `%s'::`%s' varOnly=%d\n",c.data(),m.data(),varOnly));
   if (getDefs(c,m,"()",md,cd,fd,nd,gd,FALSE,g_sourceFileDef,FALSE,g_forceTagReference) && 
-      md->isLinkable() && (!varOnly || md->isVariable()))
+      (!varOnly || md->isVariable()))
   {
-    //printf("found it %s!\n",md->qualifiedName().data());
-    if (g_exampleBlock)
+    if (md->isLinkable())
     {
-      QCString anchor;
-      anchor.sprintf("a%d",g_anchorCount);
-      //printf("addExampleFile(%s,%s,%s)\n",anchor.data(),g_exampleName.data(),
-      //                                  g_exampleFile.data());
-      if (md->addExample(anchor,g_exampleName,g_exampleFile))
+      //printf("found it %s!\n",md->qualifiedName().data());
+      if (g_exampleBlock)
       {
-	ol.writeCodeAnchor(anchor);
-	g_anchorCount++;
+        QCString anchor;
+        anchor.sprintf("a%d",g_anchorCount);
+        //printf("addExampleFile(%s,%s,%s)\n",anchor.data(),g_exampleName.data(),
+        //                                  g_exampleFile.data());
+        if (md->addExample(anchor,g_exampleName,g_exampleFile))
+        {
+          ol.writeCodeAnchor(anchor);
+          g_anchorCount++;
+        }
+      }
+
+      Definition *d = md->getOuterScope()==Doxygen::globalScope ?
+        md->getFileDef() : md->getOuterScope();
+      if (md->getGroupDef()) d = md->getGroupDef();
+      if (d && d->isLinkable())
+      {
+        g_theCallContext.setScope(stripClassName(md->typeString(),md->getOuterScope()));
+        //printf("g_currentDefinition=%p g_currentMemberDef=%p g_insideBody=%d\n",
+        //        g_currentDefinition,g_currentMemberDef,g_insideBody);
+
+        if (g_currentDefinition && g_currentMemberDef &&
+            md!=g_currentMemberDef && g_insideBody && g_collectXRefs)
+        {
+          addDocCrossReference(g_currentMemberDef,md);
+        }
+        //printf("d->getReference()=`%s' d->getOutputBase()=`%s' name=`%s' member name=`%s'\n",d->getReference().data(),d->getOutputFileBase().data(),d->name().data(),md->name().data());
+
+        writeMultiLineCodeLink(ol,md, text ? text : memberText);
+        addToSearchIndex(text ? text : memberText);
+        return TRUE;
       }
     }
-
-    Definition *d = md->getOuterScope()==Doxygen::globalScope ?
-	            md->getFileDef() : md->getOuterScope();
-    if (md->getGroupDef()) d = md->getGroupDef();
-    if (d && d->isLinkable())
+    else // found member, but is is not linkable, so make sure content inside is not assign
+         // to the previous member, see bug762760
     {
-      g_theCallContext.setScope(stripClassName(md->typeString(),md->getOuterScope()));
-      //printf("g_currentDefinition=%p g_currentMemberDef=%p g_insideBody=%d\n",
-      //        g_currentDefinition,g_currentMemberDef,g_insideBody);
-
-      if (g_currentDefinition && g_currentMemberDef &&
-          md!=g_currentMemberDef && g_insideBody && g_collectXRefs)
-      {
-	addDocCrossReference(g_currentMemberDef,md);
-      }
-      //printf("d->getReference()=`%s' d->getOutputBase()=`%s' name=`%s' member name=`%s'\n",d->getReference().data(),d->getOutputFileBase().data(),d->name().data(),md->name().data());
-     
-      writeMultiLineCodeLink(ol,md, text ? text : memberText);
-      addToSearchIndex(text ? text : memberText);
-      return TRUE;
-    } 
+      DBG_CTX((stderr,"unlinkable member %s\n",md->name().data()));
+      g_currentMemberDef = 0;
+    }
   }
   return FALSE;
 }
@@ -1705,6 +1718,21 @@ static void writeObjCMethodCall(ObjCCallCtx *ctx)
             codifyLines(pWord->data());
 	  }
 	}
+        else if (nc=='d') // comment block
+        {
+          nc=*p++;
+	  QCString refIdStr;
+	  while (nc!=0 && isdigit(nc)) { refIdStr+=nc; nc=*p++; }
+	  p--;
+	  int refId=refIdStr.toInt();
+	  QCString *pComment = g_commentDict.find(refId);
+          if (pComment)
+          {
+            startFontClass("comment");
+	    codifyLines(pComment->data());
+	    endFontClass();
+          }
+        }
 	else // illegal marker
 	{
 	  ASSERT(!"invalid escape sequence");
@@ -1717,7 +1745,7 @@ static void writeObjCMethodCall(ObjCCallCtx *ctx)
       s[0]=c;s[1]=0;
       codifyLines(s);
     }
-  }  
+  }
   //printf("%s %s]\n",ctx->objectTypeOrName.data(),ctx->methodName.data());
   //printf("}=(type='%s',name='%s')",
   //    ctx->objectTypeOrName.data(),
@@ -1751,6 +1779,15 @@ static QCString escapeWord(const char *s)
   result.sprintf("$w%d",g_currentWordId);
   g_wordDict.insert(g_currentWordId,new QCString(s));
   g_currentWordId++;
+  return result;
+}
+
+static QCString escapeComment(const char *s)
+{
+  QCString result;
+  result.sprintf("$d%d",g_currentCommentId);
+  g_commentDict.insert(g_currentCommentId,new QCString(s));
+  g_currentCommentId++;
   return result;
 }
 
@@ -1827,6 +1864,7 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 %x      ObjCCall
 %x      ObjCMName
 %x      ObjCSkipStr
+%x      ObjCCallComment
 %x      OldStyleArgs
 %x	UsingName
 %x      RawString
@@ -2723,10 +2761,12 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					    g_nameDict.setAutoDelete(TRUE);
 					    g_objectDict.setAutoDelete(TRUE);
 					    g_wordDict.setAutoDelete(TRUE);
+                                            g_commentDict.setAutoDelete(TRUE);
 					    g_contextDict.clear();
 					    g_nameDict.clear();
 					    g_objectDict.clear();
 					    g_wordDict.clear();
+                                            g_commentDict.clear();
 					    g_currentCtxId  = 0;
 					    g_currentNameId  = 0;
 					    g_currentObjId  = 0;
@@ -2811,13 +2851,13 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 					  BEGIN(Body);
   					}
   */
-<ObjCCall,ObjCMName>"["         { 
-                                   saveObjCContext();
-			           g_currentCtx->format+=*yytext;
-			           BEGIN(ObjCCall);
-		                   //printf("open\n");
-                                 }
-<ObjCCall,ObjCMName>"]"         { 
+<ObjCCall,ObjCMName>"["|"{"       {
+                                    saveObjCContext();
+			            g_currentCtx->format+=*yytext;
+			            BEGIN(ObjCCall);
+		                    //printf("open\n");
+                                  }
+<ObjCCall,ObjCMName>"]"|"}"       {
 			            g_currentCtx->format+=*yytext;
                                     restoreObjCContext();
 			            BEGIN(ObjCMName);
@@ -2829,6 +2869,23 @@ RAWEND    ")"[^ \t\(\)\\]{0,16}\"
 				    }
 			            //printf("close\n");
                                   }
+<ObjCCall,ObjCMName>"//".*        {
+                                    g_currentCtx->format+=escapeComment(yytext);
+                                  }
+<ObjCCall,ObjCMName>"/*"          {
+                                    g_lastObjCCallContext = YY_START;
+                                    g_currentCtx->comment=yytext;
+                                    BEGIN(ObjCCallComment);
+                                  }
+<ObjCCallComment>"*/"		  {
+                                    g_currentCtx->comment+=yytext;
+                                    g_currentCtx->format+=escapeComment(g_currentCtx->comment);
+  			  	    BEGIN(g_lastObjCCallContext);
+				  }
+<ObjCCallComment>[^*\n]+          { g_currentCtx->comment+=yytext; }
+<ObjCCallComment>"//"|"/*"        { g_currentCtx->comment+=yytext; }
+<ObjCCallComment>\n               { g_currentCtx->comment+=*yytext; }
+<ObjCCallComment>.                { g_currentCtx->comment+=*yytext; }
 <ObjCCall>{ID}	                  {
                                     g_currentCtx->format+=escapeObject(yytext);
 			            if (g_braceCount==0)
@@ -3602,15 +3659,16 @@ void parseCCode(CodeOutputInterface &od,const char *className,const QCString &s,
   g_searchCtx = searchCtx;
   g_collectXRefs = collectXRefs;
   g_inFunctionTryBlock = FALSE;
-  if (endLine!=-1)
-    g_inputLines  = endLine+1;
-  else
-    g_inputLines  = countLines();
 
   if (startLine!=-1)
     g_yyLineNr    = startLine;
   else
     g_yyLineNr    = 1;
+
+  if (endLine!=-1)
+    g_inputLines  = endLine+1;
+  else
+    g_inputLines  = g_yyLineNr + countLines() - 1;
 
   g_curlyCount    = 0;
   g_bodyCurlyCount    = 0;

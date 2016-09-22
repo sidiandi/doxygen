@@ -619,21 +619,7 @@ static void writeDefaultHeaderPart1(FTextStream &t)
        "\\makeindex\n"
        "\n";
 
-  // User-specified packages
-  QStrList &extraPackages = Config_getList(EXTRA_PACKAGES);
-  if (!extraPackages.isEmpty()) {
-    t << "% Packages requested by user\n";
-    const char *pkgName=extraPackages.first();
-    while (pkgName)
-    {
-      if ((pkgName[0] == '[') || (pkgName[0] == '{'))
-        t << "\\usepackage" << pkgName << "\n";
-      else
-        t << "\\usepackage{" << pkgName << "}\n";
-      pkgName=extraPackages.next();
-    }
-    t << "\n";
-  }
+  writeExtraLatexPackages(t);
 
   // Hyperlinks
   bool pdfHyperlinks = Config_getBool(PDF_HYPERLINKS);
@@ -1306,7 +1292,7 @@ void LatexGenerator::endIndexItem(const char *ref,const char *fn)
 //{
 //  t << "\\item\\contentsline{section}{";
 //  docify(text);
-//  t << "}{\\pageref{" << text << "}}" << endl;
+//  t << "}{\\pageref{" << stripPath(text) << "}}" << endl;
 //}
 
 
@@ -1350,7 +1336,7 @@ void LatexGenerator::writeStartAnnoItem(const char *,const char *,
 
 void LatexGenerator::writeEndAnnoItem(const char *name)
 {
-  t << "}{\\pageref{" << name << "}}{}" << endl;
+  t << "}{\\pageref{" << stripPath(name) << "}}{}" << endl;
 }
 
 void LatexGenerator::startIndexKey()
@@ -1371,7 +1357,7 @@ void LatexGenerator::startIndexValue(bool hasBrief)
 void LatexGenerator::endIndexValue(const char *name,bool /*hasBrief*/)
 {
   //if (hasBrief) t << ")";
-  t << "}{\\pageref{" << name << "}}{}" << endl;
+  t << "}{\\pageref{" << stripPath(name) << "}}{}" << endl;
 }
 
 //void LatexGenerator::writeClassLink(const char *,const char *,
@@ -1536,8 +1522,10 @@ void LatexGenerator::startMemberDoc(const char *clname,
                                     const char *memname,
                                     const char *,
                                     const char *title,
+                                    int memCount,
+                                    int memTotal,
                                     bool showInline)
-{ 
+{
   if (memname && memname[0]!='@')
   {
     t << "\\index{";
@@ -1564,7 +1552,7 @@ void LatexGenerator::startMemberDoc(const char *clname,
       t << latexEscapeLabelName(clname,insideTabbing);
       t << "@{";
       t << latexEscapeIndexChars(clname,insideTabbing);
-      t << "}"; 
+      t << "}";
     }
     t << "}" << endl;
   }
@@ -1574,9 +1562,9 @@ void LatexGenerator::startMemberDoc(const char *clname,
   int level=0;
   if (showInline) level+=2;
   if (compactLatex) level++;
-  t << "\\" << levelLab[level]; 
+  t << "\\" << levelLab[level];
 
-  t << "[{";
+  t << "{";
   if (pdfHyperlinks)
   {
     t << "\\texorpdfstring{";
@@ -1586,25 +1574,25 @@ void LatexGenerator::startMemberDoc(const char *clname,
   {
     t << "}{" << latexEscapePDFString(title) << "}";
   }
-  t << "}]";
-  t << "{\\setlength{\\rightskip}{0pt plus 5cm}";
-  disableLinks=TRUE;
+  if (memTotal>1)
+  {
+    t << "\\hspace{0.1cm}{\\footnotesize\\ttfamily [" << memCount << "/" << memTotal << "]}";
+  }
+  t << "}";
+  t << "\n{\\footnotesize\\ttfamily ";
+  //disableLinks=TRUE;
 }
 
 void LatexGenerator::endMemberDoc(bool)
 {
   disableLinks=FALSE;
-  t << "}";
+  t << "}\n\n";
   //if (Config_getBool(COMPACT_LATEX)) t << "\\hfill";
 }
 
 void LatexGenerator::startDoxyAnchor(const char *fName,const char *,
                                      const char *anchor, const char *,
                                      const char *)
-{
-}
-
-void LatexGenerator::endDoxyAnchor(const char *fName,const char *anchor)
 {
   static bool pdfHyperlinks = Config_getBool(PDF_HYPERLINKS);
   static bool usePDFLatex   = Config_getBool(USE_PDFLATEX);
@@ -1618,7 +1606,11 @@ void LatexGenerator::endDoxyAnchor(const char *fName,const char *anchor)
   t << "\\label{";
   if (fName) t << stripPath(fName);
   if (anchor) t << "_" << anchor;
-  t << "}" << endl;
+  t << "} " << endl;
+}
+
+void LatexGenerator::endDoxyAnchor(const char *fName,const char *anchor)
+{
 }
 
 void LatexGenerator::writeAnchor(const char *fName,const char *name)
@@ -1834,6 +1826,65 @@ void LatexGenerator::writeNonBreakableSpace(int)
   }
 }
 
+// ----------------------------------------------
+// nesting of functions below:
+// startDescTable()
+// - startDescTableRow()
+//   - startDescTableTitle()
+//   - endDescTabelTitle()
+//   - startDescTableData()
+//   - endDescTableData()
+// - endDescTableRow()
+// - startDescTableRow()
+//   - ...
+// - endDescTableRow()
+// endDescTable()
+
+void LatexGenerator::startDescTable(const char *title)
+{
+  t << "\\begin{DoxyEnumFields}{" << title << "}" << endl;
+}
+
+void LatexGenerator::endDescTable()
+{
+  t << "\\end{DoxyEnumFields}" << endl;
+}
+
+void LatexGenerator::startDescTableRow()
+{
+  // this is needed to prevent the \hypertarget, \label, and \index commands from messing up
+  // the row height (based on http://tex.stackexchange.com/a/186102)
+  t << "\\raisebox{\\heightof{T}}[0pt][0pt]{";
+}
+
+void LatexGenerator::endDescTableRow()
+{
+}
+
+void LatexGenerator::startDescTableTitle()
+{
+  t << "}";
+}
+
+void LatexGenerator::endDescTableTitle()
+{
+}
+
+void LatexGenerator::startDescTableData()
+{
+  t << "&";
+}
+
+void LatexGenerator::endDescTableData()
+{
+  t << "\\\\\n\\hline\n" << endl;
+}
+
+void LatexGenerator::lastIndexPage() 
+{
+}
+
+
 void LatexGenerator::startMemberList()  
 { 
   if (!insideTabbing)
@@ -2006,7 +2057,7 @@ void LatexGenerator::startParameterList(bool openBracket)
 {
   /* start of ParameterType ParameterName list */
   if (openBracket) t << "(";
-  t << endl << "\\begin{DoxyParamCaption}" << endl;
+  t << "\\begin{DoxyParamCaption}";
 }
 
 void LatexGenerator::endParameterList()
@@ -2029,13 +2080,12 @@ void LatexGenerator::startParameterName(bool /*oneArgOnly*/)
   t << "{";
 }
 
-void LatexGenerator::endParameterName(bool last,bool /* emptyList */,bool closeBracket)
+void LatexGenerator::endParameterName(bool last,bool /*emptyList*/,bool closeBracket)
 {
-  t << "}" << endl;
-
+  t << " }";
   if (last)
   {
-    t << "\\end{DoxyParamCaption}" << endl;
+    t << "\\end{DoxyParamCaption}";
     if (closeBracket) t << ")";
   }
 }
@@ -2133,20 +2183,35 @@ void LatexGenerator::lineBreak(const char *)
   }
   else
   {
-    t << "\\\\*\n";
+    t << "\\newline\n";
   }
 }
 
-void LatexGenerator::startMemberDocSimple()
+void LatexGenerator::startMemberDocSimple(bool isEnum)
 {
-  t << "\\begin{DoxyFields}{";
-  docify(theTranslator->trCompoundMembers());
+  if (isEnum)
+  {
+    t << "\\begin{DoxyEnumFields}{";
+    docify(theTranslator->trEnumerationValues());
+  }
+  else
+  {
+    t << "\\begin{DoxyFields}{";
+    docify(theTranslator->trCompoundMembers());
+  }
   t << "}" << endl;
 }
 
-void LatexGenerator::endMemberDocSimple()
+void LatexGenerator::endMemberDocSimple(bool isEnum)
 {
-  t << "\\end{DoxyFields}" << endl;
+  if (isEnum)
+  {
+    t << "\\end{DoxyEnumFields}" << endl;
+  }
+  else
+  {
+    t << "\\end{DoxyFields}" << endl;
+  }
 }
 
 void LatexGenerator::startInlineMemberType()
