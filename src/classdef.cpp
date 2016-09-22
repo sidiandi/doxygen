@@ -1710,8 +1710,8 @@ void ClassDef::writeInlineDocumentation(OutputList &ol)
   ol.pushGeneratorState();
   ol.disableAllBut(OutputGenerator::Html);
   { // only HTML only
-    ol.writeAnchor(0, anchor());
-    ol.startMemberDoc(0, 0, 0, 0, FALSE);
+    ol.writeAnchor(0,anchor());
+    ol.startMemberDoc(0,0,anchor(),name(),1,1,FALSE);
     ol.startMemberDocName(FALSE);
     ol.parseText(s);
     ol.endMemberDocName();

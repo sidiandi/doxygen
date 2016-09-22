@@ -526,7 +526,7 @@ void Definition::writeDocAnchorsToTagFile(FTextStream &tagFile)
     SectionInfo *si;
     for (;(si=sdi.current());++sdi)
     {
-      if (!si->generated)
+      if (!si->generated && si->ref.isEmpty())
       {
         //printf("write an entry!\n");
         if (definitionType()==TypeMember) tagFile << "  ";
@@ -878,6 +878,7 @@ bool readCodeFragment(const char *fileName,
     }
   }
   result = transcodeCharacterStringToUTF8(result);
+  if (!result.isEmpty() && result.at(result.length()-1)!='\n') result += "\n";
   //fprintf(stderr,"readCodeFragement(%d-%d)=%s\n",startLine,endLine,result.data());
   return found;
 }
@@ -1873,6 +1874,21 @@ FileDef *Definition::getBodyDef() const
 GroupList *Definition::partOfGroups() const 
 { 
   return m_impl->partOfGroups; 
+}
+
+bool Definition::isLinkableViaGroup() const
+{
+  GroupList *gl = partOfGroups();
+  if (gl)
+  {
+    GroupListIterator gli(*gl);
+    GroupDef *gd;
+    for (gli.toFirst();(gd=gli.current());++gli)
+    {
+      if (gd->isLinkable()) return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 Definition *Definition::getOuterScope() const 

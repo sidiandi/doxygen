@@ -50,7 +50,7 @@ static QCString convertIndexWordToAnchor(const QString &word)
     while ((c = *str++))
     {
       if ((c >= 'a' && c <= 'z') || // ALPHA
-          (c >= 'A' && c <= 'A') || // ALPHA
+          (c >= 'A' && c <= 'Z') || // ALPHA
           (c >= '0' && c <= '9') || // DIGIT
           c == '-' ||
           c == '.' ||
@@ -578,12 +578,42 @@ void HtmlDocVisitor::visit(DocInclude *inc)
                                            -1,    // endLine
                                            TRUE,  // inlineFragment
                                            0,     // memberDef
+                                           FALSE, // show line number
+                                           m_ctx  // search context
+                                          );
+         m_t << PREFRAG_END;
+         forceStartParagraph(inc);
+      }
+      break;
+    case DocInclude::SnipWithLines:
+      {
+         forceEndParagraph(inc);
+         m_t << PREFRAG_START;
+         QFileInfo cfi( inc->file() );
+         FileDef fd( cfi.dirPath().utf8(), cfi.fileName().utf8() );
+         Doxygen::parserManager->getParser(inc->extension())
+                               ->parseCode(m_ci,
+                                           inc->context(),
+                                           extractBlock(inc->text(),inc->blockId()),
+                                           langExt,
+                                           inc->isExample(),
+                                           inc->exampleFile(), 
+                                           &fd,
+                                           lineBlock(inc->text(),inc->blockId()),
+                                           -1,    // endLine
+                                           FALSE, // inlineFragment
+                                           0,     // memberDef
                                            TRUE,  // show line number
                                            m_ctx  // search context
                                           );
          m_t << PREFRAG_END;
          forceStartParagraph(inc);
       }
+      break;
+    case DocInclude::SnippetDoc: 
+    case DocInclude::IncludeDoc: 
+      err("Internal inconsistency: found switch SnippetDoc / IncludeDoc in file: %s"
+          "Please create a bug report\n",__FILE__);
       break;
   }
 }
@@ -1312,7 +1342,7 @@ void HtmlDocVisitor::visitPre(DocHtmlTable *t)
   }
   else
   {
-    m_t << "<table " << htmlAttribsToString(t->attribs()) << ">\n";
+    m_t << "<table" << htmlAttribsToString(t->attribs()) << ">\n";
   }
 }
 
@@ -1429,17 +1459,43 @@ void HtmlDocVisitor::visitPre(DocImage *img)
     }
     m_t << "<div class=\"image\">" << endl;
     QCString url = img->url();
+    QCString sizeAttribs;
+    if (!img->width().isEmpty())
+    {
+      sizeAttribs+=" width=\""+img->width()+"\"";
+    }
+    if (!img->height().isEmpty())
+    {
+      sizeAttribs+=" height=\""+img->height()+"\"";
+    }
     if (url.isEmpty())
     {
-      m_t << "<img src=\"" << img->relPath() << img->name() << "\" alt=\"" 
-          << baseName << "\"" << htmlAttribsToString(img->attribs()) 
-          << "/>" << endl;
+      if (img->name().right(4)==".svg")
+      {
+        m_t << "<object type=\"image/svg+xml\" data=\"" << img->relPath() << img->name()
+            << "\"" << sizeAttribs << htmlAttribsToString(img->attribs()) << ">" << baseName
+            << "</object>" << endl;
+      }
+      else
+      {
+        m_t << "<img src=\"" << img->relPath() << img->name() << "\" alt=\""
+            << baseName << "\"" << sizeAttribs << htmlAttribsToString(img->attribs())
+            << "/>" << endl;
+      }
     }
     else
     {
-      m_t << "<img src=\"" << correctURL(url,img->relPath()) << "\" " 
-          << htmlAttribsToString(img->attribs())
-          << "/>" << endl;
+      if (url.right(4)==".svg")
+      {
+        m_t << "<object type=\"image/svg+xml\" data=\"" << correctURL(url,img->relPath())
+            << "\"" << sizeAttribs << htmlAttribsToString(img->attribs()) << "></object>" << endl;
+      }
+      else
+      {
+        m_t << "<img src=\"" << correctURL(url,img->relPath()) << "\""
+            << sizeAttribs << htmlAttribsToString(img->attribs())
+            << "/>" << endl;
+      }
     }
     if (img->hasCaption())
     {
@@ -1810,7 +1866,7 @@ void HtmlDocVisitor::visitPre(DocHtmlBlockQuote *b)
   }
   else
   {
-    m_t << "<blockquote " << htmlAttribsToString(b->attribs()) << ">\n";
+    m_t << "<blockquote" << htmlAttribsToString(b->attribs()) << ">\n";
   }
 }
 

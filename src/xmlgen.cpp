@@ -804,11 +804,12 @@ static void generateXMLForMember(MemberDef *md,FTextStream &ti,FTextStream &t,De
     if (md->isWritable())
       t << "        <write>" << convertToXML(md->getWriteAccessor()) << "</write>" << endl;
   }
+
   if (md->memberType()==MemberType_Variable && md->bitfieldString())
   {
     QCString bitfield = md->bitfieldString();
     if (bitfield.at(0)==':') bitfield=bitfield.mid(1);
-    t << "        <bitfield>" << bitfield << "</bitfield>" << endl;
+    t << "        <bitfield>" << convertToXML(bitfield) << "</bitfield>" << endl;
   }
   
   MemberDef *rmd = md->reimplements();

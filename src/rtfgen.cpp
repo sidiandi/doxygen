@@ -1535,10 +1535,12 @@ void RTFGenerator::endGroupHeader(int)
 }
 
 void RTFGenerator::startMemberDoc(const char *clname,
-  const char *memname,
-  const char *,
-  const char *,
-  bool showInline)
+    const char *memname,
+    const char *,
+    const char *,
+    int,
+    int,
+    bool showInline)
 {
   DBG_RTF(t << "{\\comment startMemberDoc}" << endl)
     if (memname && memname[0] != '@')
@@ -2041,51 +2043,68 @@ void RTFGenerator::endMemberList()
 //
 void RTFGenerator::startDescTable(const char *title)
 {
-  DBG_RTF(t << "{\\comment (startDescTable) }" << endl)
-    startSimpleSect(EnumValues, 0, 0, title);
-  startDescForItem();
-  //t << "{" << endl;
-  //incrementIndentLevel();
-  //t << rtf_Style_Reset << rtf_CList_DepthStyle();
+  DBG_RTF(t << "{\\comment (startDescTable) }"    << endl)
+  t << "{\\par" << endl;
+  t << "{" << rtf_Style["Heading5"]->reference << endl;
+  docify(title);
+  t << ":\\par}" << endl;
+  t << rtf_Style_Reset << rtf_DList_DepthStyle();
+  t << "\\trowd \\trgaph108\\trleft426\\tblind426"
+       "\\trbrdrt\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrl\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrb\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrr\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrh\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrv\\brdrs\\brdrw10\\brdrcf15 "<< endl;
+  int i,columnPos[2] = { 25, 100 };
+  for (i=0;i<2;i++)
+  {
+    t << "\\clvertalt\\clbrdrt\\brdrs\\brdrw10\\brdrcf15 "
+         "\\clbrdrl\\brdrs\\brdrw10\\brdrcf15 "
+         "\\clbrdrb\\brdrs\\brdrw10\\brdrcf15 "
+         "\\clbrdrr \\brdrs\\brdrw10\\brdrcf15 "
+         "\\cltxlrtb "
+         "\\cellx" << (rtf_pageWidth*columnPos[i]/100) << endl;
+  }
+  t << "\\pard \\widctlpar\\intbl\\adjustright" << endl;
 }
 
 void RTFGenerator::endDescTable()
 {
-  //decrementIndentLevel();
-  DBG_RTF(t << "{\\comment (endDescTable)}" << endl)
-    endDescForItem();
-  endSimpleSect();
-  //t << "}" << endl;
-  //t << rtf_Style_Reset << styleStack.top();
+  DBG_RTF(t << "{\\comment (endDescTable)}"      << endl)
+  t << "}" << endl;
+}
+
+void RTFGenerator::startDescTableRow()
+{
+}
+
+void RTFGenerator::endDescTableRow()
+{
 }
 
 void RTFGenerator::startDescTableTitle()
 {
-  //t << rtf_BList_DepthStyle() << endl;
-  DBG_RTF(t << "{\\comment (startDescTableTitle) }" << endl)
-    startBold();
-  startEmphasis();
+  DBG_RTF(t << "{\\comment (startDescTableTitle) }"    << endl)
+  t << "{\\qr ";
 }
 
 void RTFGenerator::endDescTableTitle()
 {
-  DBG_RTF(t << "{\\comment (endDescTableTitle) }" << endl)
-    endEmphasis();
-  endBold();
-  t << "  ";
+  DBG_RTF(t << "{\\comment (endDescTableTitle) }"    << endl)
+  t << "\\cell }";
 }
 
 void RTFGenerator::startDescTableData()
 {
-  DBG_RTF(t << "{\\comment (startDescTableData) }" << endl)
-    m_omitParagraph = FALSE;
+  DBG_RTF(t << "{\\comment (startDescTableData) }"    << endl)
+  t << "{";
 }
 
 void RTFGenerator::endDescTableData()
 {
-  DBG_RTF(t << "{\\comment (endDescTableData) }" << endl)
-    newParagraph();
-  m_omitParagraph = TRUE;
+  DBG_RTF(t << "{\\comment (endDescTableData) }"    << endl)
+  t << "\\cell }{\\row }" << endl;
 }
 
 // a style for list formatted as a "bulleted list"
@@ -2962,22 +2981,36 @@ void RTFGenerator::endInlineHeader()
   t << "}" << endl;
 }
 
-void RTFGenerator::startMemberDocSimple()
+void RTFGenerator::startMemberDocSimple(bool isEnum)
 {
   DBG_RTF(t << "{\\comment (startMemberDocSimple)}" << endl)
-    t << "{\\par" << endl;
+  t << "{\\par" << endl;
   t << "{" << rtf_Style["Heading5"]->reference << endl;
-  t << theTranslator->trCompoundMembers() << ":\\par}" << endl;
+  if (isEnum)
+  {
+    t << theTranslator->trEnumerationValues();
+  }
+  else
+  {
+    t << theTranslator->trCompoundMembers();
+  }
+  t << ":\\par}" << endl;
   t << rtf_Style_Reset << rtf_DList_DepthStyle();
   t << "\\trowd \\trgaph108\\trleft426\\tblind426"
-    "\\trbrdrt\\brdrs\\brdrw10\\brdrcf15 "
-    "\\trbrdrl\\brdrs\\brdrw10\\brdrcf15 "
-    "\\trbrdrb\\brdrs\\brdrw10\\brdrcf15 "
-    "\\trbrdrr\\brdrs\\brdrw10\\brdrcf15 "
-    "\\trbrdrh\\brdrs\\brdrw10\\brdrcf15 "
-    "\\trbrdrv\\brdrs\\brdrw10\\brdrcf15 " << endl;
-  int i, columnPos[3] = { 25, 50, 100 };
-  for (i = 0; i < 3; i++)
+       "\\trbrdrt\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrl\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrb\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrr\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrh\\brdrs\\brdrw10\\brdrcf15 "
+       "\\trbrdrv\\brdrs\\brdrw10\\brdrcf15 "<< endl;
+  int i,n=3,columnPos[3] = { 25, 50, 100 };
+  if (isEnum)
+  {
+    columnPos[0]=30;
+    columnPos[1]=100;
+    n=2;
+  }
+  for (i=0;i<n;i++)
   {
     t << "\\clvertalt\\clbrdrt\\brdrs\\brdrw10\\brdrcf15 "
       "\\clbrdrl\\brdrs\\brdrw10\\brdrcf15 "
@@ -2989,7 +3022,7 @@ void RTFGenerator::startMemberDocSimple()
   t << "\\pard \\widctlpar\\intbl\\adjustright" << endl;
 }
 
-void RTFGenerator::endMemberDocSimple()
+void RTFGenerator::endMemberDocSimple(bool)
 {
   DBG_RTF(t << "{\\comment (endMemberDocSimple)}" << endl)
     t << "}" << endl;

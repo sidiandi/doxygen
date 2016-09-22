@@ -134,7 +134,8 @@ static QCString field2URL(const IndexField *f,bool checkReversed)
   QCString result = f->url + Doxygen::htmlFileExtension;
   if (!f->anchor.isEmpty() && (!checkReversed || f->reversed)) 
   {
-    result+="#"+f->anchor;  
+    // HTML Help needs colons in link anchors to be escaped in the .hhk file.
+    result+="#"+substitute(f->anchor,":","%3A");
   }
   return result;
 }
@@ -190,7 +191,7 @@ void HtmlHelpIndex::writeFields(FTextStream &t)
     { // finish old list at level 2
       if (level2Started) t << "  </UL>" << endl;
       level2Started=FALSE;
-    
+
       // <Antony>
       // Added this code so that an item with only one subitem is written
       // without any subitem.
@@ -214,7 +215,7 @@ void HtmlHelpIndex::writeFields(FTextStream &t)
       if (level2.isEmpty())
       {
         t << "  <LI><OBJECT type=\"text/sitemap\">";
-        t << "<param name=\"Local\" value=\"" << field2URL(f,TRUE);
+        t << "<param name=\"Local\" value=\"" << field2URL(f,FALSE);
         t << "\">";
         t << "<param name=\"Name\" value=\"" << m_help->recode(level1) << "\">"
            "</OBJECT>\n";
@@ -446,7 +447,7 @@ void HtmlHelp::initialize()
 }
 
 
-static QCString getLanguageString()
+QCString HtmlHelp::getLanguageString()
 {
   if (!theTranslator->idLanguage().isEmpty())
   {

@@ -671,6 +671,16 @@ Go to the <a href="commands.html">next</a> section or return to the
 ]]>
       </docs>
     </option>
+    <option type='int' id='TOC_INCLUDE_HEADINGS' minval='0' maxval='99' defval='0' depends='MARKDOWN_SUPPORT'>
+      <docs>
+<![CDATA[
+ When the \c TOC_INCLUDE_HEADINGS tag is set to a non-zero value, all headings
+ up to that level are automatically included in the table of contents, even if
+ they do not have an id attribute.
+ \note This feature currently applies only to Markdown headings.
+]]>
+      </docs>
+    </option>
     <option type='bool' id='AUTOLINK_SUPPORT' defval='1'>
       <docs>
 <![CDATA[
@@ -1381,6 +1391,9 @@ FILE_VERSION_INFO = "cleartool desc -fmt \%Vn"
       <value name='*.py'/>
       <value name='*.pyw'/>
       <value name='*.f90'/>
+      <value name='*.f95'/>
+      <value name='*.f03'/>
+      <value name='*.f08'/>
       <value name='*.f'/>
       <value name='*.for'/>
       <value name='*.tcl'/>
@@ -1388,8 +1401,6 @@ FILE_VERSION_INFO = "cleartool desc -fmt \%Vn"
       <value name='*.vhdl'/>
       <value name='*.ucf'/>
       <value name='*.qsf'/>
-      <value name='*.as'/>
-      <value name='*.js'/>
     </option>
     <option type='bool' id='RECURSIVE' defval='0'>
       <docs>
@@ -3463,6 +3474,14 @@ to be found in the default search path.
  java can find the \c plantuml.jar file. If left blank, it is assumed PlantUML is not used or 
  called during a preprocessing step. Doxygen will generate a warning when it encounters a 
  \ref cmdstartuml "\\startuml" command in this case and will not generate output for the diagram.
+]]>
+      </docs>
+    </option>
+    <option type='string' id='PLANTUML_CFG_FILE' format='file' defval=''>
+      <docs>
+<![CDATA[
+ When using plantuml, the \c PLANTUML_CFG_FILE tag can be used to specify a configuration 
+ file for plantuml.
 ]]>
       </docs>
     </option>
