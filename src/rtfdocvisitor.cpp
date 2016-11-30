@@ -191,30 +191,30 @@ void RTFDocVisitor::visit(DocStyleChange *s)
   switch (s->style())
   {
     case DocStyleChange::Bold:
-      if (s->enable()) m_t << "{\\b ";      else m_t << "} ";
+      if (s->enable()) m_t << "{\\b ";      else m_t << "}";
       break;
     case DocStyleChange::Italic:
-      if (s->enable()) m_t << "{\\i ";     else m_t << "} ";
+      if (s->enable()) m_t << "{\\i ";     else m_t << "}";
       break;
     case DocStyleChange::Code:
-      if (s->enable()) m_t << "{\\f2 ";   else m_t << "} ";
+      if (s->enable()) m_t << "{\\f2 ";   else m_t << "}";
       break;
     case DocStyleChange::Subscript:
-      if (s->enable()) m_t << "{\\sub ";    else m_t << "} ";
+      if (s->enable()) m_t << "{\\sub ";    else m_t << "}";
       break;
     case DocStyleChange::Superscript:
-      if (s->enable()) m_t << "{\\super ";    else m_t << "} ";
+      if (s->enable()) m_t << "{\\super ";    else m_t << "}";
       break;
     case DocStyleChange::Center:
-      if (s->enable()) m_t << "{\\qc "; else m_t << "} ";
+      if (s->enable()) m_t << "{\\qc "; else m_t << "}";
       break;
     case DocStyleChange::Small:
-      if (s->enable()) m_t << "{\\sub ";  else m_t << "} ";
+      if (s->enable()) m_t << "{\\sub ";  else m_t << "}";
       break;
     case DocStyleChange::Preformatted:
       if (s->enable())
       {
-        m_t << "{" << endl;
+        m_t << " {" << endl;
         m_t << "\\par" << endl;
         m_t << rtf_Style_Reset << getStyle("CodeExample");
         m_insidePre=TRUE;
@@ -1038,16 +1038,44 @@ void RTFDocVisitor::visitPre(DocHRef *href)
 {
   if (m_hide) return;
   DBG_RTF("{\\comment RTFDocVisitor::visitPre(DocHRef)}\n");
+  bool hasTitle = false;
+  QCString title;
+  QCString atrName = "title";
+  HtmlAttribList attrList = href->attribs();
+
+  QListIterator<HtmlAttrib> it(attrList);
+  HtmlAttrib* attr; 
+  for (; (attr = it.current()); ++it)
+  {
+	  if (attr->name == atrName)
+	  {
+		  hasTitle = true;
+		  title = attr->value;
+	  }
+  }
+
   if (Config_getBool(RTF_HYPERLINKS))
   {
-    m_t << "{\\field "
-             "{\\*\\fldinst "
-               "{ HYPERLINK \"" << href->url() << "\" "
-               "}{}"
-             "}"
-             "{\\fldrslt "
-               "{\\cs37\\ul\\cf2 ";
-
+	  if (hasTitle)
+	  {
+		  m_t << "{\\field "
+			  "{\\*\\fldinst "
+			  "{ HYPERLINK \"" << href->url() << "\" \\\\o \"" << title << "\""
+			  "}{}"
+			  "}"
+			  "{\\fldrslt "
+			  "{\\cs37\\ul\\cf2 ";
+	  }
+	  else
+	  {
+		  m_t << "{\\field "
+			  "{\\*\\fldinst "
+			  "{ HYPERLINK \"" << href->url() << "\" "
+			  "}{}"
+			  "}"
+			  "{\\fldrslt "
+			  "{\\cs37\\ul\\cf2 ";
+	  }
   }
   else
   {
@@ -1116,7 +1144,7 @@ void RTFDocVisitor::includePicturePreRTF(const QCString name, const bool isTypeR
     m_t << "\\par" << endl;
     m_t << "{" << endl;
     m_t << rtf_Style_Reset << endl;
-    if (hasCaption || m_lastIsPara) m_t << "\\par" << endl;
+    if (hasCaption || m_lastIsPara) 
     m_t << "\\pard \\qc { \\field\\flddirty {\\*\\fldinst  INCLUDEPICTURE \"";
     m_t << name;
     m_t << "\" \\\\d \\\\*MERGEFORMAT}{\\fldrslt Image}}" << endl;
@@ -1148,13 +1176,16 @@ void RTFDocVisitor::includePicturePostRTF(const bool isTypeRTF, const bool hasCa
     if (m_hide) return;
     if (hasCaption)
     {
-       m_t << "}" <<endl;
-       m_t << "\\par}" <<endl;
+	   m_t << "}" <<endl;
+       m_t << "\\par" <<endl;
+	   m_t << "}" << endl;
     }
     else
     {
        m_t << "}" <<endl;
     }
+	m_t << "\\par" << endl;
+	m_lastIsPara = TRUE;
   }
   else
   {
@@ -1215,15 +1246,38 @@ void RTFDocVisitor::visitPre(DocRef *ref)
 {
   if (m_hide) return;
   DBG_RTF("{\\comment RTFDocVisitor::visitPre(DocRef)}\n");
-  // when ref->isSubPage()==TRUE we use ref->file() for HTML and
+  bool hasTitle = false;
+  QCString titel = ref->targetTitle();
+  if (titel.size() > 0)
+  {
+	  hasTitle = true;
+  }
+   // when ref->isSubPage()==TRUE we use ref->file() for HTML and
   // ref->anchor() for LaTeX/RTF
   if (ref->isSubPage())
   {
-    startLink(ref->ref(),0,ref->anchor());
+	  if (hasTitle)
+	  {
+		  startLinkWithTitle(ref->ref(), 0, ref->anchor(), ref->targetTitle());
+	  }
+	  else
+	  {
+		  startLink(ref->ref(), 0, ref->anchor());
+	  }
   }
   else
   {
-    if (!ref->file().isEmpty()) startLink(ref->ref(),ref->file(),ref->anchor());
+	  if (!ref->file().isEmpty())
+	  {
+		  if (hasTitle)
+		  {
+			  startLinkWithTitle(ref->ref(), ref->file(), ref->anchor(), ref->targetTitle());
+		  }
+		  else
+		  {
+			  startLink(ref->ref(), ref->file(), ref->anchor());
+		  }
+	  }
   }
   if (!ref->hasLinkText()) filter(ref->targetTitle());
 }
@@ -1737,6 +1791,38 @@ void RTFDocVisitor::startLink(const QCString &ref,const QCString &file,const QCS
     m_t << "{\\b ";
   }
   m_lastIsPara=FALSE;
+}
+
+void RTFDocVisitor::startLinkWithTitle(const QCString &ref, const QCString &file, const QCString &anchor, const QCString &title)
+{
+	if (ref.isEmpty() && Config_getBool(RTF_HYPERLINKS))
+	{
+		QCString refName;
+		if (!file.isEmpty())
+		{
+			refName += file;
+		}
+		if (!file.isEmpty() && anchor)
+		{
+			refName += '_';
+		}
+		if (anchor)
+		{
+			refName += anchor;
+		}
+
+		m_t << "{\\field {\\*\\fldinst { HYPERLINK  \\\\l \"";
+		m_t << rtfFormatBmkStr(refName);
+		m_t << "\" \\\\o \"";
+		m_t << title;
+		m_t << "\" }{}";
+		m_t << "}{\\fldrslt {\\cs37\\ul\\cf2 ";
+	}
+	else
+	{
+		m_t << "{\\b ";
+	}
+	m_lastIsPara = FALSE;
 }
 
 void RTFDocVisitor::endLink(const QCString &ref)

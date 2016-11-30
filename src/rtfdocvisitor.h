@@ -145,6 +145,8 @@ class RTFDocVisitor : public DocVisitor
     void filter(const char *str,bool verbatim=FALSE);
     void startLink(const QCString &ref,const QCString &file,
                    const QCString &anchor);
+	void startLinkWithTitle(const QCString &ref, const QCString &file,
+		const QCString &anchor, const QCString &title);
     void endLink(const QCString &ref);
     QCString getStyle(const char *name);
     void incIndentLevel();
