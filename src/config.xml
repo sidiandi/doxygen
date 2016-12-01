@@ -472,6 +472,14 @@ Go to the <a href="commands.html">next</a> section or return to the
  ]]>
       </docs>
     </option>
+	<option type='string' id='REQUISITE_DOCUMENT_FILENAME' format='string' defval=''>
+      <docs>
+<![CDATA[
+ The \c REQUISITE_DOCUMENT_FILENAME tag is used by \c mrdoc which is developed by Siemens Healthcare GmbH.
+ This tag defines the filename of a generated RequisitePro document, e.g. CSD_EDS.EDS.
+ ]]>
+      </docs>
+    </option>
 	<option type='string' id='REQUISITE_PROJECT' format='string' defval='NXVA10A'>
       <docs>
 <![CDATA[
