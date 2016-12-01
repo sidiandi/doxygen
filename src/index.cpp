@@ -2971,6 +2971,7 @@ static void writeNamespaceMemberIndexFiltered(OutputList &ol,
         g_namespaceIndexLetterUsed[hl],
         Definition::TypeNamespace);
     endFile(ol);
+    first=FALSE;
   }
   if (multiPageIndex && addToIndex) Doxygen::indexList->decContentsDepth();
   ol.popGeneratorState();

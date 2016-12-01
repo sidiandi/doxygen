@@ -16,6 +16,8 @@
 #include "plantuml.h"
 #include "portable.h"
 #include "config.h"
+#include "doxygen.h"
+#include "index.h"
 #include "message.h"
 
 #include <qdir.h>
@@ -84,20 +86,27 @@ void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutp
   pumlArgs+="-o \"";
   pumlArgs+=outDir;
   pumlArgs+="\" ";
-  QCString extension;
+  QCString imgName = baseName;
+  // The basename contains path, we need to strip the path from the filename in order
+  // to create the image file name which should be included in the index.qhp (Qt help index file).
+  int i;
+  if ((i=imgName.findRev('/'))!=-1) // strip path
+  {
+    imgName=imgName.right(imgName.length()-i-1);
+  }
   switch (format)
   {
     case PUML_BITMAP:
       pumlArgs+="-tpng";
-      extension=".png";
+      imgName+=".png";
       break;
     case PUML_EPS:
       pumlArgs+="-teps";
-      extension=".eps";
+      imgName+=".eps";
       break;
     case PUML_SVG:
       pumlArgs+="-tsvg";
-      extension=".svg";
+      imgName+=".svg";
       break;
   }
   pumlArgs+=" \"";
@@ -105,7 +114,7 @@ void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutp
   pumlArgs+=".pu\" ";
   pumlArgs+="-charset UTF-8 ";
   int exitCode;
-  //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,outFile);
+  //printf("*** running: %s %s outDir:%s %s\n",pumlExe.data(),pumlArgs.data(),outDir,baseName);
   msg("Running PlantUML on generated file %s.pu\n",baseName);
   portable_sysTimerStart();
   if ((exitCode=portable_system(pumlExe,pumlArgs,TRUE))!=0)
@@ -129,5 +138,6 @@ void generatePlantUMLOutput(const char *baseName,const char *outDir,PlantUMLOutp
     }
     portable_sysTimerStop();
   }
+  Doxygen::indexList->addImageFile(imgName);
 }
 
