@@ -24,6 +24,8 @@ For Windows one can generate a Visual Studio project using
 (this is for Visual Studio 12, there are typically also generators for other versions of
 Visual Studio or other compiler environments like MinGW)
 
+Use winbuild/bootstrap.bat to set up the complete build environment for Windows.
+
 Doxygen's cmake configuration provides a number of options:
 - build_wizard    Build the GUI frontend for doxygen.
 - build_app       Example showing how to embed doxygen in an application.
