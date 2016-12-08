@@ -367,8 +367,7 @@ void RTFGenerator::startFile(const char *name, const char *, const char *)
 void RTFGenerator::endFile()
 {
   DBG_RTF(t << "{\\comment endFile}\n")
-    t << "}";
-
+  t << "}";
   endPlainFile();
 }
 
@@ -552,7 +551,7 @@ void RTFGenerator::startIndexSection(IndexSections is)
   break;
   case isPageDocumentation2:
   {
-    if (isTableOfContentEntriesEnabled()) t << "{\\tc \\v ";
+        t << "{\\tc \\v ";
   }
   break;
   case isEndIndex:
@@ -944,7 +943,7 @@ void RTFGenerator::endIndexSection(IndexSections is)
   break;
   case isPageDocumentation2:
   {
-    if (isTableOfContentEntriesEnabled()) t << "}";
+    t << "}";
     t << "\\par " << rtf_Style_Reset << endl;
   }
   break;
