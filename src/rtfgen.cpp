@@ -297,7 +297,7 @@ void RTFGenerator::beginRTFChapter()
 
   if (isIncludableRtf())
 	{
-		t << "{";
+		// t << "{";
 		t << rtf_Style_Reset;
 	}
   else
@@ -938,7 +938,7 @@ void RTFGenerator::endIndexSection(IndexSections is)
 
     if (isIncludableRtf())
     {
-		t << "\\par }";
+		t << "\\par ";
     }
   }
   break;
