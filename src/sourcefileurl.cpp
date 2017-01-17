@@ -92,12 +92,13 @@ QString getFileUrl(const QString& path)
   QString url = ConfigValues::instance().VERSION_CONTROL_URL;
   if (!url.isEmpty())
   {
-    QString absVersionControlRoot = QDir(ConfigValues::instance().VERSION_CONTROL_ROOT).absPath();
+    QString absVersionControlRoot = QDir(ConfigValues::instance().VERSION_CONTROL_ROOT.append("/")).absPath();
     QString absPath = QFileInfo(path).absFilePath();
     if (absPath.lower().startsWith(absVersionControlRoot.lower()))
     {
       QString relativePath = absPath.mid(absVersionControlRoot.length());
-      QString urlParameter = urlEncode(relativePath);
+	  if (relativePath.left(1) != "/") relativePath.prepend("/");
+	  QString urlParameter = urlEncode(relativePath);
       // printf("url encoded path: %s\n", urlParameter.utf8().data());
       url.sprintf(url.utf8().data(), urlParameter.utf8().data());
       return url;
@@ -112,9 +113,10 @@ QString getFileName(const QString& path)
   QCString url = ConfigValues::instance().VERSION_CONTROL_URL;
   if (!url.isEmpty())
   {
-    QString absVersionControlRoot = QDir(ConfigValues::instance().VERSION_CONTROL_ROOT).absPath();
+	QString absVersionControlRoot = QDir(ConfigValues::instance().VERSION_CONTROL_ROOT.append("/")).absPath();
     QString absPath = QFileInfo(path).absFilePath();
     QString relativePath = absPath.mid(absVersionControlRoot.length());
+	if (relativePath.left(1) != "/") relativePath.prepend("/");
     if (!relativePath.isEmpty())
     {
       return QString("$") + relativePath;
