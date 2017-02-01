@@ -1014,7 +1014,7 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
   					  current->name = yytext;
   					}
 <CliPropertyType>"["		        { // C++/CLI indexed property
-  					  current->name += yytext;
+  					  current->args = "[";
 					  BEGIN( CliPropertyIndex );
   					}
 <CliPropertyType>"{"			{
@@ -1037,10 +1037,10 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
   					}
 <CliPropertyIndex>"]"			{
                                           BEGIN( CliPropertyType );
-  					  current->name+=yytext;
+  					  current->args+=yytext;
   					}
 <CliPropertyIndex>.			{
-  					  current->name+=yytext;
+  					  current->args+=yytext;
   					}
   /*
 <FindMembers>{B}*"property"{BN}+        { 
@@ -2051,6 +2051,9 @@ OPERATOR  "operator"{B}*({ARITHOP}|{ASSIGNOP}|{LOGICOP}|{BITOP})
 					    BEGIN( DocBlock );
 					  }
   					}
+<UsingAlias>">>"                        {
+                                          previous->args+="> >"; // see bug769552
+                                        }
 <UsingAlias>.                           {
                                           previous->args+=yytext;
                                         }
