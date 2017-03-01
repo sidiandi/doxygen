@@ -212,43 +212,43 @@ Rtf_Style_Default rtf_Style_Default[] =
   },
   { "LatexTOC0",
     "\\s70\\li0\\sa30\\sb30\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext81 LatexTOC 0"
+    "\\sbasedon0 \\snext71 LatexTOC 0"
   },
   { "LatexTOC1",
     "\\s71\\li360\\sa27\\sb27\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext82 LatexTOC 1"
+    "\\sbasedon0 \\snext72 LatexTOC 1"
   },
   { "LatexTOC2",
     "\\s72\\li720\\sa24\\sb24\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext83 LatexTOC 2"
+    "\\sbasedon0 \\snext73 LatexTOC 2"
   },
   { "LatexTOC3",
     "\\s73\\li1080\\sa21\\sb21\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext84 LatexTOC 3"
+    "\\sbasedon0 \\snext74 LatexTOC 3"
   },
   { "LatexTOC4",
     "\\s74\\li1440\\sa18\\sb18\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext85 LatexTOC 4"
+    "\\sbasedon0 \\snext75 LatexTOC 4"
   },
   { "LatexTOC5",
     "\\s75\\li1800\\sa15\\sb15\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext86 LatexTOC 5"
+    "\\sbasedon0 \\snext76 LatexTOC 5"
   },
   { "LatexTOC6",
     "\\s76\\li2160\\sa12\\sb12\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext87 LatexTOC 6"
+    "\\sbasedon0 \\snext77 LatexTOC 6"
   },
   { "LatexTOC7",
     "\\s77\\li2520\\sa9\\sb9\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext88 LatexTOC 7"
+    "\\sbasedon0 \\snext78 LatexTOC 7"
   },
   { "LatexTOC8",
     "\\s78\\li2880\\sa6\\sb6\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext89 LatexTOC 8"
+    "\\sbasedon0 \\snext79 LatexTOC 8"
   },
   { "LatexTOC9",
     "\\s79\\li3240\\sa3\\sb3\\widctlpar\\tqr\\tldot\\tx8640\\adjustright \\fs20\\cgrid ",
-    "\\sbasedon0 \\snext89 LatexTOC 9"
+    "\\sbasedon0 \\snext79 LatexTOC 9"
   },
   { "ListBullet0",
     "\\s80\\fi-360\\li360\\widctlpar\\jclisttab\\tx360{\\*\\pn \\pnlvlbody\\ilvl0\\ls1\\pnrnot0\\pndec }\\ls1\\adjustright \\fs20\\cgrid ",
@@ -316,7 +316,7 @@ Rtf_Style_Default rtf_Style_Default[] =
   },
   { "ListEnum6",
     "\\s96\\fi-360\\li2520\\widctlpar\\fs20\\cgrid ",
-    "\\sbasedon0 \\snext96 \\sautoupd List Enum 5"
+    "\\sbasedon0 \\snext96 \\sautoupd List Enum 6"
   },
   { "ListEnum7",
     "\\s97\\fi-360\\li2880\\widctlpar\\fs20\\cgrid ",
