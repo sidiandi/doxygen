@@ -37,8 +37,8 @@
 #include "plantuml.h"
 #include "rtfincludable.h"
 
-//#define DBG_RTF(x) m_t << x
-#define DBG_RTF(x) do {} while(0)
+#define DBG_RTF(x) m_t << x
+//#define DBG_RTF(x) do {} while(0)
 
 static QCString align(DocHtmlCell *cell)
 {
@@ -1909,5 +1909,6 @@ void RTFDocVisitor::writePlantUMLFile(const QCString &fileName, const bool hasCa
   }
   QCString outDir = Config_getString(RTF_OUTPUT);
   generatePlantUMLOutput(fileName,outDir,PUML_BITMAP);
+  m_lastIsPara = TRUE;
   includePicturePreRTF(baseName + ".png", true, hasCaption);
 }
