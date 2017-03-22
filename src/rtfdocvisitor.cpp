@@ -37,8 +37,8 @@
 #include "plantuml.h"
 #include "rtfincludable.h"
 
-#define DBG_RTF(x) m_t << x
-//#define DBG_RTF(x) do {} while(0)
+//#define DBG_RTF(x) m_t << x
+#define DBG_RTF(x) do {} while(0)
 
 static QCString align(DocHtmlCell *cell)
 {
